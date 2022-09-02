@@ -9,12 +9,73 @@
     body {
       background-color: black;
     }
-    canvas {
-      border: 1px solid lightgray;
+    .screen {
+      border: 2px solid lightgray;
+      border-radius: 15px;
+    }
+    .h-container {
+      display: flex;
+    }
+    .v-container {
+      display: flex;
+      flex-direction: column;
+    }
+    .diskette {
+      width: 500px;
+      height: 80px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      position: relative; /* For the file input cover the whole div */
+      border-radius: 10px;
+      border: 2px solid #333;
+      background: linear-gradient(0deg, #444, #777, #444);
+      margin-bottom: 10px;
+    }
+    .diskette:hover {
+      border: 2px solid #AAA;
+      background: linear-gradient(0deg, #555, #999, #555);
+    }
+    .diskette:active {
+      border: 2px solid #666;
+      background: linear-gradient(0deg, #000, #333, #000);
+    }
+    .diskette img {
+      height: 70%;
+      margin-left: 10px;
+      display: flex;
+    }
+    .diskette div {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .diskette span {
+      font-family: Arial;
+      font-size: 20px;
+      font-weight: bold;
+      color: #DDD;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+    #diskette-container {
+      margin-left: 10px;
     }
   </style>
 </head>
 <body>
-  <canvas width=768 height=544></canvas>
+  <div class="h-container">
+    <canvas class="screen" width=768 height=544></canvas>
+    <div class="v-container" id="diskette-container">
+      <div class="diskette" id="A" style="">
+        <img src="diskette.png">
+        <div><span></span></div>
+      </div>
+      <div class="diskette" id="B">
+        <img src="diskette.png">
+        <div><span></span></div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

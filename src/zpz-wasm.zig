@@ -20,6 +20,27 @@ pub fn log(
   _: anytype,
 ) void {}
 
+// https://github.com/daneelsan/zig-wasm-logger/blob/master/JS.zig
+pub const Console = struct {
+  pub const Logger = struct {
+    pub const Error = error{};
+    pub const Writer = std.io.Writer(void, Error, write);
+
+    fn write(_: void, bytes: []const u8) Error!usize {
+      // This function can be called with only part of the string formatted,
+      // that's why we need to first acculmulate the string and then flush
+      // it later with printString.
+      addString(bytes.ptr, bytes.len);
+      return bytes.len;
+    }
+  };
+
+  const logger = Logger.Writer{ .context = {} };
+  pub fn log(comptime format: []const u8, args: anytype) void {
+    logger.print(format, args) catch return;
+    printString();
+  }
+};
 
 const SpecialKey = enum(u8) {
   Delete = 8,
@@ -89,14 +110,20 @@ export fn keyup(keycode: u8) void {
   }
 }
 
-var emulator: Emulator = undefined;
 export fn new_emulator() *Emulator {
-  emulator = Emulator.new(allocator) catch |err| {
+  var emulator = Emulator.new(allocator) catch |err| {
     Console.log("error: Emulator.new: {}", .{ err });
     unreachable();
   };
   emulator.init();
   return &emulator;
+}
+
+export fn insert_disk(emulator: *Emulator, drive: u8, ptr: [*]const u8, size: i32) void {
+  if (!chips.cpc_insert_disc_in_drive(&emulator.cpc, drive, ptr, size)) {
+    Console.log("error: Emulator.insert_disk error", .{});
+    unreachable();
+  }
 }
 
 fn handle_event(cpc: *chips.cpc_t, ctrl: *bool, shift: *bool) void {
@@ -156,31 +183,9 @@ fn handle_event(cpc: *chips.cpc_t, ctrl: *bool, shift: *bool) void {
   }
 }
 
-export fn tick(frame_time: u16) void {
+export fn tick(emulator: *Emulator, frame_time: u16) void {
   handle_event(&emulator.cpc, &emulator.ctrl, &emulator.shift);
   _ = chips.cpc_exec(&emulator.cpc, frame_time * 1000); // This in CPC micro-seconds
 
   display(emulator.pixel_buffer);
 }
-
-// https://github.com/daneelsan/zig-wasm-logger/blob/master/JS.zig
-pub const Console = struct {
-  pub const Logger = struct {
-    pub const Error = error{};
-    pub const Writer = std.io.Writer(void, Error, write);
-
-    fn write(_: void, bytes: []const u8) Error!usize {
-      // This function can be called with only part of the string formatted,
-      // that's why we need to first acculmulate the string and then flush
-      // it later with printString.
-      addString(bytes.ptr, bytes.len);
-      return bytes.len;
-    }
-  };
-
-  const logger = Logger.Writer{ .context = {} };
-  pub fn log(comptime format: []const u8, args: anytype) void {
-    logger.print(format, args) catch return;
-    printString();
-  }
-};

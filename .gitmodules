@@ -1,0 +1,4 @@
+[submodule "chips"]
+	path = chips
+	url = http://github.com/LukeSkyw/chips.git
+	branch = cpc-two-drives

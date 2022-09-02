@@ -7,20 +7,29 @@
 `zpz` is an emulator frontend (basically just some zig glue code) that uses
 `https://github.com/floooh/chips` to emulate an Amstrad CPC 6128.
 
-I really encourage you to check out https://github.com/floooh/chips for a very
-clean and understandable CPC emulator code base.
+I encourage you to check out https://github.com/floooh/chips for a very
+well made, clean and understandable CPC emulator code base.
+
+# Demo
+
+The emulator is accessible in your browser here: http://cpc.novidee.com.
 
 # Build
 
-The repository https://github.com/floooh/chips must be checked out in the parent
-folder.
-
-⚠️ For now, a particular branch must be checked out for `zpz` to compile:
+First clone the zpz repository:
 ```bash
-git clone -b cpc-two-drives git@github.com:LukeSkyw/chips.git
+git clone git@github.com:jdmichaud/zpz.git
 ```
 
-Then, in `zpz` folder:
+Then, in `zpz` folder, initialize the chips submodule:
+```bash
+git submodule init
+git submodule update
+```
+Note that this will checkout a custom version of the chip folder supporting 2
+disks for the CPC.
+
+Then to build the solution:
 ```bash
 zig build
 ```
@@ -29,6 +38,16 @@ For best performance:
 ```bash
 zig build -Drelease-fast
 ```
+
+# Build for the web
+
+In order to generate a wasm file do:
+```bash
+zig build wasm -Drelease-safe=true
+```
+
+The release flag is mandatory. Without it, your browser will complain of too
+much local variable. The release flag optimizes away some of them.
 
 # Usage
 

@@ -1,14 +1,16 @@
 FROM nginx:1.23.1
 
 RUN apt update
-RUN apt install -y curl xz-utils less zip
+RUN apt install -y curl xz-utils less git
 
-RUN curl -sOL https://github.com/marler8997/zigup/releases/download/v2022_08_25/zigup.ubuntu-latest-x86_64.zip && \
-  unzip zigup.ubuntu-latest-x86_64.zip && \
-  chmod +x zigup && \
-  zigup 0.10.0-dev.3842+36f4f32fa
+RUN curl -sOL https://ziglang.org/builds/zig-linux-x86_64-0.10.0-dev.3842+36f4f32fa.tar.xz && \
+  tar Jxf zig-linux-x86_64-0.10.0-dev.3842+36f4f32fa.tar.xz
 
+RUN git clone http://github.com/jdmichaud/zpz && \
+  cd zpz && \
+  git submodule init && \
+  git submodule update && \
+  ../zig-linux-x86_64-0.10.0-dev.3842+36f4f32fa/zig build wasm -Drelease-fast=true
 
-
-COPY web /usr/share/nginx/html
-COPY zig-out/lib/zpz6128.wasm /usr/share/nginx/html
+RUN cp /zpz/web/* /usr/share/nginx/html && \
+  cp /zpz/zig-out/lib/zpz6128.wasm /usr/share/nginx/html

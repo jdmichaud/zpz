@@ -14,7 +14,7 @@ pub fn setup_wasm(b: *std.build.Builder) void {
 
     lib.setBuildMode(mode);
     lib.setTarget(.{ .cpu_arch = .wasm32, .os_tag = .freestanding });
-    lib.addIncludePath("../chips/");
+    lib.addIncludePath("./chips/");
     lib.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
     lib.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
     lib.import_memory = true;
@@ -45,7 +45,7 @@ pub fn build(b: *std.build.Builder) void {
 
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    exe.addIncludePath("../chips/");
+    exe.addIncludePath("./chips/");
     exe.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
     exe.linkSystemLibrary("SDL2");
     exe.linkSystemLibrary("c");
