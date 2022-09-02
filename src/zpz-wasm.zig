@@ -145,7 +145,7 @@ fn handle_event(cpc: *chips.cpc_t, ctrl: *bool, shift: *bool) void {
           SpecialKey.ArrowDown      => { c = 0x0A; },
           SpecialKey.ArrowUp        => { c = 0x0B; },
           SpecialKey.Enter          => { c = 0x0D; },
-          SpecialKey.Control        => { ctrl.* = event == Event.KeyDown; },
+          SpecialKey.Control        => { ctrl.* = event == Event.KeyDown; }, // What is the value of the key to inject here???
           SpecialKey.Shift          => { c = 0x02; shift.* = event == Event.KeyDown; },
           SpecialKey.Delete         => { c = if (shift.*) 0x0C else 0x01; }, // 0x0C: clear screen
           SpecialKey.Escape         => { c = if (shift.*) 0x13 else 0x03; }, // 0x13: break

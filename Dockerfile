@@ -10,7 +10,7 @@ RUN git clone http://github.com/jdmichaud/zpz && \
   cd zpz && \
   git submodule init && \
   git submodule update && \
-  ../zig-linux-x86_64-0.10.0-dev.3842+36f4f32fa/zig build wasm -Drelease-fast=true
+  ../zig-linux-x86_64-0.10.0-dev.3842+36f4f32fa/zig build wasm -Drelease-small=true
 
 RUN cp /zpz/web/* /usr/share/nginx/html && \
   cp /zpz/zig-out/lib/zpz6128.wasm /usr/share/nginx/html

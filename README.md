@@ -1,4 +1,4 @@
-# zpz: An Amstrad CPC emulator frontend written in zig using https://github.com/floooh/chips
+## zpz: An Amstrad CPC emulator frontend written in zig using https://github.com/floooh/chips
 
 <p align="center">
   <img width="385" src="demo-cpc6128.gif">
@@ -10,11 +10,11 @@
 I encourage you to check out https://github.com/floooh/chips for a very
 well made, clean and understandable CPC emulator code base.
 
-# Demo
+## Demo
 
 The emulator is accessible in your browser here: http://cpc.novidee.com.
 
-# Build
+## Build
 
 First clone the zpz repository:
 ```bash
@@ -39,17 +39,7 @@ For best performance:
 zig build -Drelease-fast
 ```
 
-# Build for the web
-
-In order to generate a wasm file do:
-```bash
-zig build wasm -Drelease-safe=true
-```
-
-The release flag is mandatory. Without it, your browser will complain of too
-much local variable. The release flag optimizes away some of them.
-
-# Usage
+## Usage
 
 To launch:
 ```bash
@@ -60,3 +50,19 @@ To load one or two disks, pass the `dsk` file path in the command line:
 ```bash
 ./zig-out/bin/zpz6128 /path/to/some.dsk /another/path.dsk
 ```
+
+## Build for the web
+
+In order to generate a wasm file do:
+```bash
+zig build wasm -Drelease-safe=true
+```
+
+Then serve the web folder:
+```bash
+cd web
+python3 -m http.server
+```
+
+The release flag is mandatory. Without it, your browser will complain of too
+much local variables. The release flag optimizes away some of them.

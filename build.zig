@@ -1,14 +1,6 @@
 const std = @import("std");
 
 pub fn setup_wasm(b: *std.build.Builder) void {
-    // const exe = b.addExecutable("zpz6128", "src/zpz-wasm.zig");
-
-    // exe.setTarget("wasm32");
-    // exe.addIncludePath("../chips/");
-    // exe.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
-    // exe.linkSystemLibrary("c");
-    // exe.install();
-
     const mode = b.standardReleaseOptions();
     const lib = b.addSharedLibrary("zpz6128", "src/zpz-wasm.zig", .unversioned);
 

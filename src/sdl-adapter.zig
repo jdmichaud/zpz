@@ -94,7 +94,7 @@ pub const SDLAdapter = struct {
             sdl.SDLK_UP        => { c = 0x0B; },
             sdl.SDLK_RETURN    => { c = 0x0D; },
             sdl.SDLK_RCTRL,
-            sdl.SDLK_LCTRL     => { ctrl.* = event.type == sdl.SDL_KEYDOWN; },
+            sdl.SDLK_LCTRL     => { ctrl.* = event.type == sdl.SDL_KEYDOWN; }, // What is the value of the key to inject here???
             sdl.SDLK_RSHIFT,
             sdl.SDLK_LSHIFT    => { c = 0x02; shift.* = event.type == sdl.SDL_KEYDOWN; },
             sdl.SDLK_BACKSPACE => { c = if (shift.*) 0x0C else 0x01; }, // 0x0C: clear screen

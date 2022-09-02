@@ -13,7 +13,6 @@ pub const Emulator = struct {
   pixel_buffer_size: usize,
   pixel_buffer: [*]c_uint,
 
-  // pub fn new() anyerror!Emulator {
   pub fn new(allocator: std.mem.Allocator) anyerror!Emulator {
     // Embed rom with the tool for now.
     var os: chips.cpc_rom_image_t = .{
