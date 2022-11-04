@@ -157,7 +157,6 @@ pub const SDLAdapter = struct {
       sdl.SDL_Log("Unable to lock texture: %s", sdl.SDL_GetError());
       return error.UnableToLockTexture;
     }
-    _ = pitch;
 
     // CPC pixel sizes differ from PC pixel sizes. We apply a correction factor in height.
     const height_factor = self.height / height;

@@ -42,7 +42,7 @@ pub fn build(b: *std.build.Builder) void {
     exe.linkSystemLibrary("SDL2");
     exe.linkSystemLibrary("c");
     exe.install();
-    exe.use_stage1 = true; // stage2 not ready
+    // exe.use_stage1 = true; // stage2 not ready
 
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
