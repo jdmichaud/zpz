@@ -39,7 +39,7 @@ async function main() {
       while (j < height) {
         let i = 0;
         while (i < width) {
-          // j >> 1 because we print to line on the PC screen for one CPC line.
+          // j >> 1 because we print two lines on the PC screen for one CPC line.
           canvasPixel[i + j * width] = pixelArray[i + (j >> 1) * width];
           i += 1;
         }
