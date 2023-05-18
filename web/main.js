@@ -90,12 +90,9 @@ async function main() {
     free: ptr => {
       // Nothing gets freed
     },
-    __assert_fail: (assertion, file, line, fun) => {
+    __assert_fail_js: (assertion, file, line, fun) => {
       const charArray = new Uint8Array(memory.buffer);
       console.log(`${toStr(charArray, file)}(${line}): ${toStr(charArray, assertion)} in ${toStr(charArray, fun)}`);
-    },
-    __stack_chk_fail: () => {
-      console.log('panic: stack overflow');
     },
   }
   // Load the wasm code

@@ -3,8 +3,9 @@ const Emulator = @import("zpz.zig").Emulator;
 const foo = @import("zpz.zig").foo;
 const chips = @import("chips-decl.zig").chips;
 
-var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-const allocator = general_purpose_allocator.allocator();
+// var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+// const allocator = general_purpose_allocator.allocator();
+const allocator = std.heap.wasm_allocator;
 // const allocator = std.heap.c_allocator;
 
 extern fn display(ptr: [*]c_uint) void;
@@ -12,6 +13,7 @@ extern fn addString(ptr: [*]const u8, size: usize) void;
 extern fn printString() void;
 extern fn writeConsoleBuffer(ptr: [*]const u8, size: usize) void;
 extern fn printConsoleBuffer() void;
+extern fn __assert_fail_js(assertion: [*]const u8, file: [*]const u8, line: u32, fun: [*]const u8) void;
 
 pub fn log(
   comptime _: std.log.Level,
@@ -188,4 +190,8 @@ export fn tick(emulator: *Emulator, frame_time: u16) void {
   _ = chips.cpc_exec(&emulator.cpc, frame_time * 1000); // This in CPC micro-seconds
 
   display(emulator.pixel_buffer);
+}
+
+export fn __assert_fail(assertion: [*]const u8, file: [*]const u8, line: u32, fun: [*]const u8) void {
+  __assert_fail_js(assertion, file, line, fun);
 }
