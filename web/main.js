@@ -12,14 +12,96 @@ function toStr(charArray, ptr, limit=255) {
   return textDecoder.decode(new Uint8Array(charArray.buffer, ptr, end - ptr - 1));
 }
 
+async function setProgram(canvas, vertexShaderPath, fragmentShaderPath) {
+  // Retrieve the shader code
+  const vertexShaderSource = await (await fetch(vertexShaderPath)).text();
+  const fragmentShaderSource = await (await fetch(fragmentShaderPath)).text();
+  // Get the WebGL context from the canvas
+  const gl = canvas.getContext('webgl2');
+  if (gl === null) throw new Error('null gl');
+  // Set clear color to black, fully opaque
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  // Load the shaders and compile them
+  const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+  if (vertexShader === null) throw new Error('null vertexShader');
+  gl.shaderSource(vertexShader, vertexShaderSource);
+  gl.compileShader(vertexShader);
+  const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+  if (fragmentShader === null) throw new Error('null fragmentShader');
+  gl.shaderSource(fragmentShader, fragmentShaderSource);
+  gl.compileShader(fragmentShader);
+  // Create the shader program
+  const shaderProgram = gl.createProgram();
+  if (shaderProgram === null) throw new Error('null shaderProgram');
+  gl.attachShader(shaderProgram, vertexShader);
+  gl.attachShader(shaderProgram, fragmentShader);
+  gl.linkProgram(shaderProgram);
+  gl.useProgram(shaderProgram);
+  // Create the image plane
+  const positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  const positions = [ -1, -1, 1, -1, -1,  1, -1,  1, 1, -1, 1,  1 ];
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+  // Create bindings
+  const vertexPosition = gl.getAttribLocation(shaderProgram, 'pos');
+  // Prepare the vertex position to be loaded into the GPU
+  gl.vertexAttribPointer(vertexPosition, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(vertexPosition);
+  // Create a texture to load the image to
+  const texture = gl.createTexture();
+  if (texture === null) throw new Error('null texture');
+
+  // Set the size
+  const uWidth = gl.getUniformLocation(shaderProgram, "width");
+  const uHeight = gl.getUniformLocation(shaderProgram, "height");
+  gl.uniform1f(uWidth, canvas.width);
+  gl.uniform1f(uHeight, canvas.height);
+
+  return { canvas, gl, texture, shaderProgram };
+}
+
+function loadImage(gl, shaderProgram, texture, textureCoordinatesName, samplerName,
+  textureId, image) {
+  gl.activeTexture(textureId);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, image.width, image.height, 0, gl.RGBA,
+    gl.UNSIGNED_BYTE, image);
+  const sampler = gl.getUniformLocation(shaderProgram, samplerName);
+  gl.uniform1i(sampler, textureId - gl.TEXTURE0);
+
+  const textureCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+  // // The texture coordinates must match the order of the vertex coordinates.
+  // // Texture coordinates origin [0, 0] is the bottom right and goes up and right to [1, 1]
+  // const textureCoordinates = [ 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0 ];
+  // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+  // const textureCoord = gl.getAttribLocation(shaderProgram, textureCoordinatesName);
+  // gl.vertexAttribPointer(textureCoord, 2, gl.FLOAT, false, 0, 0);
+  // gl.enableVertexAttribArray(textureCoord);
+
+  const uTexsize = gl.getUniformLocation(shaderProgram, "texsize");
+  gl.uniform2f(uTexsize, image.width, image.height);
+}
+
 async function main() {
   // By default, memory is 1 page (64K). We'll need a little more
   const memory = new WebAssembly.Memory({ initial: 1000 });
   console.log(memory.buffer.byteLength / 1024, 'KB allocated');
 
   const canvas = document.getElementsByTagName('canvas')[0];
-  const ctx = canvas.getContext('2d');
-  const imageData = new ImageData(canvas.width, canvas.height);
+  const { gl, texture, shaderProgram } = await setProgram(canvas, 'shaders/crt.v.glsl', 'shaders/crt.f.glsl');
+  // const gl = canvas.getContext('2d');
+  // The canvas we are going to dump the pixel from the emulator to
+  const temporaryCanvas = document.createElement('canvas');
+  // chips emulator work with a 768x544 screen
+  temporaryCanvas.width = 768; temporaryCanvas.height = 544;
+  const temporaryCtx = temporaryCanvas.getContext('2d');
+  const imageData = new ImageData(temporaryCanvas.width, temporaryCanvas.height);
   // Position in memory of the next available free byte.
   // malloc will move that position.
   let heapPos = 1; // 0 is the NULL pointer. Not a proper malloc return value...
@@ -45,7 +127,13 @@ async function main() {
         }
         j += 1;
       }
-      ctx.putImageData(imageData, 0, 0);
+      temporaryCtx.putImageData(imageData, 0, 0);
+      // gl.drawImage(temporaryCanvas, 0, 0, canvas.width, canvas.height);
+      // Load the image from the emulator into a texture
+      loadImage(gl, shaderProgram, texture, 'aTextureCoord', 'uImageSampler', gl.TEXTURE1, temporaryCanvas);
+      // Draw the scene
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
     // Add a log string to the buffer
     addString: (offset, size) => {
