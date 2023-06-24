@@ -117,7 +117,7 @@ pub fn main() anyerror!void {
     // 16ms in CPC time is, of course, way quicker than in real time.
     // So we need to wait a little.
     const now = adapter.interface.get_timestamp(&adapter.interface);
-    const delay: usize = frame_time - std.math.min(now - then, frame_time);
+    const delay: usize = frame_time - @min(now - then, frame_time);
     if (delay > 0) {
       std.time.sleep(delay * 1000000); // in nanoseconds
     } else {

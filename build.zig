@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
     const lib = b.addSharedLibrary(.{
         .name = "zpz6128",
-        .version = .{ .major = 1, .minor = 0 },
+        .version = .{ .major = 1, .minor = 0, .patch = 0 },
         .optimize = optimize,
         .target = .{ .cpu_arch = .wasm32, .os_tag = .freestanding },
         .root_source_file = .{ .path = "src/zpz-wasm.zig" },
