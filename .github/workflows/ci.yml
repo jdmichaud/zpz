@@ -25,6 +25,12 @@ jobs:
         git submodule init
         git submodule update
 
+    - name: Install OS dependencies
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y libsdl2-dev
+
     - name: Build
       run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
 
