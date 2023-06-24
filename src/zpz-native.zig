@@ -4,7 +4,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 const sdl = @cImport({
-  @cInclude("SDL2/SDL.h");
+  @cInclude("SDL.h");
 });
 const chips = @import("chips-decl.zig").chips;
 const Emulator = @import("zpz.zig").Emulator;

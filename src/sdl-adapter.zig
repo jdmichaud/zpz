@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdl = @cImport({
-  @cInclude("SDL2/SDL.h");
+  @cInclude("SDL.h");
 });
 const chips = @import("chips-decl.zig").chips;
 const IOAdapter = @import("io-adapter.zig").IOAdapter;
