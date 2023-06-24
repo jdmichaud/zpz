@@ -37,7 +37,7 @@ zig build
 
 For best performance:
 ```bash
-zig build -Drelease-fast
+zig build -Doptimize=ReleaseSafe
 ```
 
 ## Usage
