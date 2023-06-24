@@ -5,7 +5,8 @@
 </p>
 
 `zpz` is an emulator frontend (basically just some zig glue code) that uses
-`https://github.com/floooh/chips` to emulate an Amstrad CPC 6128.
+[Floooh's chip library](https://github.com/floooh/chips) to emulate an
+Amstrad CPC 6128.
 
 I encourage you to check out https://github.com/floooh/chips for a very
 well made, clean and understandable CPC emulator code base.
