@@ -20,6 +20,11 @@ jobs:
       with:
         version: master
 
+    - name: Init submodules
+      run: |
+        git submodule init
+        git submodule update
+
     - name: Build
       run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
 
