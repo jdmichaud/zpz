@@ -144,7 +144,7 @@ pub const SDLAdapter = struct {
     var self = @fieldParentPtr(SDLAdapter, "interface", adapter);
 
     std.os.gettimeofday(&self.tv, null);
-    return @intCast(u64, 1000000 * self.tv.tv_sec + self.tv.tv_usec) / 1000;
+    return @as(u64, @intCast(1000000 * self.tv.tv_sec + self.tv.tv_usec)) / 1000;
   }
 
   fn prepareScene(self: *Self, pixel_buffer: [*]c_uint, width: usize, height: usize) anyerror!void {
@@ -152,7 +152,7 @@ pub const SDLAdapter = struct {
 
     var buffer: [*c]u32 = undefined;
     var pitch: i32 = undefined;
-    const res = sdl.SDL_LockTexture(texture, null, @ptrCast([*c]?*anyopaque, &buffer), &pitch);
+    const res = sdl.SDL_LockTexture(texture, null, @ptrCast(&buffer), &pitch);
     if (res < 0) {
       sdl.SDL_Log("Unable to lock texture: %s", sdl.SDL_GetError());
       return error.UnableToLockTexture;

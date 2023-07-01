@@ -94,7 +94,7 @@ export fn input_char(char: u8) void {
 
 export fn keydown(keycode: u8) void {
   if (keycode != 0) {
-    const event = Event { .KeyDown = @enumFromInt(SpecialKey, keycode) };
+    const event = Event { .KeyDown = @enumFromInt(keycode) };
     events.writeItem(event) catch |err| {
       Console.log("error: input_char: {}", .{ err });
       unreachable();
@@ -104,7 +104,7 @@ export fn keydown(keycode: u8) void {
 
 export fn keyup(keycode: u8) void {
   if (keycode != 0) {
-    const event = Event { .KeyUp = @enumFromInt(SpecialKey, keycode) };
+    const event = Event { .KeyUp = @enumFromInt(keycode) };
     events.writeItem(event) catch |err| {
       Console.log("error: input_char: {}", .{ err });
       unreachable();

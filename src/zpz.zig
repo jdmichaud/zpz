@@ -16,21 +16,21 @@ pub const Emulator = struct {
   pub fn new(allocator: std.mem.Allocator) anyerror!Emulator {
     // Embed rom with the tool for now.
     var os: chips.cpc_rom_image_t = .{
-      .ptr = @ptrCast(*const anyopaque, &roms.dump_cpc6128_os_bin),
+      .ptr = @ptrCast(&roms.dump_cpc6128_os_bin),
       .size = roms.dump_cpc6128_os_bin.len,
     };
     var basic: chips.cpc_rom_image_t = .{
-      .ptr = @ptrCast(*const anyopaque, &roms.dump_cpc6128_basic_bin),
+      .ptr = @ptrCast(&roms.dump_cpc6128_basic_bin),
       .size = roms.dump_cpc6128_basic_bin.len,
     };
     var amsdos: chips.cpc_rom_image_t = .{
-      .ptr = @ptrCast(*const anyopaque, &roms.dump_cpc6128_amsdos_bin),
+      .ptr = @ptrCast(&roms.dump_cpc6128_amsdos_bin),
       .size = roms.dump_cpc6128_amsdos_bin.len,
     };
 
     var stopped: bool = false;
     const pixel_buffer_size: usize = chips.AM40010_DBG_DISPLAY_WIDTH * chips.AM40010_DBG_DISPLAY_HEIGHT * 4;
-    var pixel_buffer: [*]c_uint = @ptrCast([*]c_uint, try allocator.alloc(c_uint, pixel_buffer_size));
+    var pixel_buffer: [*]c_uint = @ptrCast(try allocator.alloc(c_uint, pixel_buffer_size));
 
     return Emulator {
       .cpc = std.mem.zeroInit(chips.cpc_t, .{}),

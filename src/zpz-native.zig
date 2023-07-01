@@ -33,7 +33,7 @@ pub fn cpc_insert_disc(cpc: *chips.cpc_t, drive: u8, pathname: []const u8) !void
   );
   errdefer std.os.munmap(buffer);
 
-  if (!chips.cpc_insert_disc_in_drive(cpc, drive, buffer.ptr, @intCast(i32, size))) {
+  if (!chips.cpc_insert_disc_in_drive(cpc, drive, buffer.ptr, @as(i32, @intCast(size)))) {
     return error.InsertDiscFailed;
   }
 }
