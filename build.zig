@@ -8,7 +8,7 @@ pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
         .target = .{ .cpu_arch = .wasm32, .os_tag = .freestanding },
         .root_source_file = .{ .path = "src/zpz-wasm.zig" },
     });
-    lib.addIncludePath("./chips/");
+    lib.addIncludePath(.{ .path = "./chips/" });
     lib.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
     // We need the libc because of the use of #include <string> memset in `chips`
     lib.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
@@ -24,7 +24,7 @@ pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
     lib.stack_protector = false;
 
     const wasm_step = b.step("wasm", "Compile the wasm library");
-    wasm_step.dependOn(&b.addInstallArtifact(lib).step);
+    wasm_step.dependOn(&b.addInstallArtifact(lib, .{}).step);
 }
 
 // Although this function looks imperative, note that its job is to
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.addIncludePath("./chips/");
+    exe.addIncludePath(.{ .path = "./chips/" });
     exe.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
     exe.linkSystemLibrary("SDL2");
     exe.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
