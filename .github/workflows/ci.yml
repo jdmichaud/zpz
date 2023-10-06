@@ -32,7 +32,10 @@ jobs:
         sudo apt-get install -y libsdl2-dev
 
     - name: Build
-      run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
+      # Need to find a way to specify where to find the correct SDL when cross building
+      # https://github.com/ziglang/zig/issues/17384
+      # run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
+      run: zig build -Doptimize=ReleaseSafe
 
     - name: Archive executable
       uses: actions/upload-artifact@v3
