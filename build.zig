@@ -9,7 +9,7 @@ pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
         .root_source_file = .{ .path = "src/zpz-wasm.zig" },
     });
     lib.addIncludePath(.{ .path = "./chips/" });
-    lib.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
+    lib.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
     // We need the libc because of the use of #include <string> memset in `chips`
     lib.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
     lib.import_memory = true;
@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     exe.addIncludePath(.{ .path = "./chips/" });
-    exe.addCSourceFiles(&.{"src/chips-impl.c"}, &.{});
+    exe.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
     exe.linkSystemLibrary("SDL2");
     exe.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
     // Some fairly large structs (cpc_t) are statically initialized.
