@@ -1,13 +1,17 @@
 const std = @import("std");
 
-pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
-    const lib = b.addSharedLibrary(.{
+pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
+    const lib = b.addExecutable(.{
         .name = "zpz6128",
         .version = .{ .major = 1, .minor = 0, .patch = 0 },
         .optimize = optimize,
-        .target = .{ .cpu_arch = .wasm32, .os_tag = .freestanding },
+        .target = b.resolveTargetQuery(.{
+          .cpu_arch = .wasm32,
+          .os_tag = .freestanding,
+        }),
         .root_source_file = .{ .path = "src/zpz-wasm.zig" },
     });
+    lib.entry = .disabled;
     lib.addIncludePath(.{ .path = "./chips/" });
     lib.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
     // We need the libc because of the use of #include <string> memset in `chips`
@@ -21,7 +25,7 @@ pub fn setup_wasm(b: *std.build, optimize: std.builtin.Mode) void {
     // lib.export_symbol_names = &[_][]const u8{ "add" };
     lib.rdynamic = true;
     // So we don't need to define like __stack_chk_guard and __stack_chk_fail
-    lib.stack_protector = false;
+    // lib.stack_protector = false;
 
     const wasm_step = b.step("wasm", "Compile the wasm library");
     wasm_step.dependOn(&b.addInstallArtifact(lib, .{}).step);

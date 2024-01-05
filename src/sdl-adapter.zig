@@ -134,7 +134,7 @@ pub const SDLAdapter = struct {
   }
 
   pub fn display(adapter: *IOAdapter, pixel_buffer: [*]c_uint, width: usize, height: usize) anyerror!void {
-    var self = @fieldParentPtr(SDLAdapter, "interface", adapter);
+    const self = @fieldParentPtr(SDLAdapter, "interface", adapter);
 
     try prepareScene(self, pixel_buffer, width, height);
     try renderScene(self);
@@ -148,7 +148,7 @@ pub const SDLAdapter = struct {
   }
 
   fn prepareScene(self: *Self, pixel_buffer: [*]c_uint, width: usize, height: usize) anyerror!void {
-    var texture = self.texture;
+    const texture = self.texture;
 
     var buffer: [*c]u32 = undefined;
     var pitch: i32 = undefined;
