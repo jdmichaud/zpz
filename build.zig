@@ -1,10 +1,11 @@
 const std = @import("std");
 
 pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
+    _ = optimize;
     const lib = b.addExecutable(.{
         .name = "zpz6128",
         .version = .{ .major = 1, .minor = 0, .patch = 0 },
-        .optimize = optimize,
+        .optimize = .ReleaseSmall, // We force ReleaseSmall for now because of too many locals
         .target = b.resolveTargetQuery(.{
           .cpu_arch = .wasm32,
           .os_tag = .freestanding,

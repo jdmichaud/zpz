@@ -56,7 +56,7 @@ To load one or two disks, pass the `dsk` file path in the command line:
 
 In order to generate a wasm file do:
 ```bash
-zig build wasm -Drelease-safe=true
+zig build wasm -Doptimize=ReleaseSmall
 ```
 
 Then serve the web folder:
