@@ -23,15 +23,15 @@ pub fn cpc_insert_disc(cpc: *chips.cpc_t, drive: u8, pathname: []const u8) !void
   defer file.close();
 
   const size = try file.getEndPos();
-  const buffer = try std.os.mmap(
+  const buffer = try std.posix.mmap(
     null,
     size,
-    std.os.PROT.READ,
-    std.os.MAP.SHARED,
+    std.posix.PROT.READ,
+    .{ .TYPE = .SHARED },
     file.handle,
     0,
   );
-  errdefer std.os.munmap(buffer);
+  errdefer std.posix.munmap(buffer);
 
   if (!chips.cpc_insert_disc_in_drive(cpc, drive, buffer.ptr, @as(i32, @intCast(size)))) {
     return error.InsertDiscFailed;
