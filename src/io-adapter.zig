@@ -4,7 +4,7 @@ const chips = @import("chips-decl.zig").chips;
 pub const IOAdapter = struct {
   handle_event_fn: *const fn (*IOAdapter, *chips.cpc_t, *bool, *bool, *bool) void,
   display_fn: *const fn (*IOAdapter, [*]c_uint, usize, usize) anyerror!void,
-  get_timestamp: *const fn (*IOAdapter) u64,
+  get_timestamp_fn: *const fn (*IOAdapter) u64,
 
   pub fn handle_event(adapter: *IOAdapter, cpc: *chips.cpc_t, running: *bool, ctrl: *bool, shift: *bool) void {
     adapter.handle_event_fn(adapter, cpc, running, ctrl, shift);
@@ -15,6 +15,6 @@ pub const IOAdapter = struct {
   }
 
   pub fn get_timestamp(adapter: *IOAdapter) u64 {
-    try adapter.get_timestamp(adapter);
+    try adapter.get_timestamp_fn(adapter);
   }
 };

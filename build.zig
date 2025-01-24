@@ -10,10 +10,10 @@ pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
           .cpu_arch = .wasm32,
           .os_tag = .freestanding,
         }),
-        .root_source_file = .{ .path = "src/zpz-wasm.zig" },
+        .root_source_file = b.path("src/zpz-wasm.zig"),
     });
     lib.entry = .disabled;
-    lib.addIncludePath(.{ .path = "./chips/" });
+    lib.addIncludePath(b.path("./chips/"));
     lib.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
     // We need the libc because of the use of #include <string> memset in `chips`
     lib.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
@@ -51,11 +51,11 @@ pub fn build(b: *std.Build) void {
         .name = "zpz6128",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/zpz-native.zig" },
+        .root_source_file = b.path("src/zpz-native.zig"),
         .target = target,
         .optimize = optimize,
     });
-    exe.addIncludePath(.{ .path = "./chips/" });
+    exe.addIncludePath(b.path("./chips/"));
     exe.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
     exe.linkSystemLibrary("SDL2");
     exe.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
@@ -93,7 +93,7 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/zpz-native.zig" },
+        .root_source_file = b.path("src/zpz-native.zig"),
         .target = target,
         .optimize = optimize,
     });
