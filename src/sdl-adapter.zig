@@ -67,7 +67,7 @@ pub const SDLAdapter = struct {
       .interface = IOAdapter {
         .handle_event_fn = handle_event,
         .display_fn = display,
-        .get_timestamp = get_timestamp_millisecond,
+        .get_timestamp_fn = get_timestamp_millisecond,
       },
     };
   }
@@ -144,7 +144,7 @@ pub const SDLAdapter = struct {
     var self: *SDLAdapter = @fieldParentPtr("interface", adapter);
 
     std.posix.gettimeofday(&self.tv, null);
-    return @as(u64, @intCast(1000000 * self.tv.tv_sec + self.tv.tv_usec)) / 1000;
+    return @as(u64, @intCast(1000000 * self.tv.sec + self.tv.usec)) / 1000;
   }
 
   fn prepareScene(self: *Self, pixel_buffer: [*]c_uint, width: usize, height: usize) anyerror!void {
