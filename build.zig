@@ -14,9 +14,14 @@ pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
     });
     lib.entry = .disabled;
     lib.addIncludePath(b.path("./chips/"));
+    // There is no libc for wasm32-freestanding, so linkLibC() would provide no
+    // header at all. `chips` only needs the declarations from <string.h> and
+    // <assert.h>: point at the headers zig already ships for wasm. The mem*
+    // symbols themselves come from zig's compiler_rt.
+    const zig_libc = b.pathJoin(&.{ b.graph.zig_lib_directory.path.?, "libc", "include" });
+    lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ zig_libc, "wasm-wasi-musl" }) });
+    lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ zig_libc, "generic-musl" }) });
     lib.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
-    // We need the libc because of the use of #include <string> memset in `chips`
-    lib.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
     lib.import_memory = true;
     lib.stack_size = 32 * 1024 * 1024;
     // lib.use_stage1 = true; // stage2 not ready
