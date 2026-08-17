@@ -5,8 +5,35 @@ const chips = @import("chips-decl.zig").chips;
 
 // var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
 // const allocator = general_purpose_allocator.allocator();
-const allocator = std.heap.wasm_allocator;
 // const allocator = std.heap.c_allocator;
+// Swap these two to compare the strategies: wasm_allocator grows the linear
+// memory itself and imports nothing, js_allocator calls out to env.malloc.
+// const allocator = std.heap.wasm_allocator;
+const js = @import("js-allocator.zig");
+const allocator = js.js_allocator;
+
+// Where the environment is allowed to start handing out memory. Must be called
+// before any other export, since every allocation goes through env.malloc.
+//
+// wasm-lld lays the linear memory out stack-first, so this is not the native
+// arrangement where the stack sits at the highest addresses and grows down
+// towards the heap. It cannot be: linear memory is always the range
+// [0, size), and memory.grow raises `size`, so the highest valid address is
+// not known at link time and a stack anchored to it would have to move every
+// time it grows. Instead the stack is a fixed region carved out at link time,
+// below the static data:
+//
+//   0x0000000 .. 0x2000000  stack, __stack_pointer starts at the top and
+//                           grows down towards 0 (32 MiB, see stack_size)
+//   0x2000000 .. 0x200cd80  static data (ROM dumps, globals)
+//   0x200cd80               __heap_base, the heap grows up from here
+//
+// Both ends therefore grow away from each other rather than towards each
+// other, and overflowing the stack runs off below 0 and traps instead of
+// quietly corrupting the data above it.
+export fn heap_base() usize {
+    return @intFromPtr(@extern([*]u8, .{ .name = "__heap_base" }));
+}
 
 extern fn display(ptr: [*]c_uint) void;
 extern fn addString(ptr: [*]const u8, size: usize) void;
@@ -85,18 +112,18 @@ const Event = union(enum) {
 var events = std.fifo.LinearFifo(Event, .Dynamic).init(allocator);
 
 export fn input_char(char: u8) void {
-  const event = Event { .CharKey = char };
+  const event = Event{ .CharKey = char };
   events.writeItem(event) catch |err| {
-    Console.log("error: input_char: {}", .{ err });
+    Console.log("error: input_char: {}", .{err});
     unreachable();
   };
 }
 
 export fn keydown(keycode: u8) void {
   if (keycode != 0) {
-    const event = Event { .KeyDown = @enumFromInt(keycode) };
+    const event = Event{ .KeyDown = @enumFromInt(keycode) };
     events.writeItem(event) catch |err| {
-      Console.log("error: input_char: {}", .{ err });
+      Console.log("error: input_char: {}", .{err});
       unreachable();
     };
   }
@@ -104,21 +131,28 @@ export fn keydown(keycode: u8) void {
 
 export fn keyup(keycode: u8) void {
   if (keycode != 0) {
-    const event = Event { .KeyUp = @enumFromInt(keycode) };
+    const event = Event{ .KeyUp = @enumFromInt(keycode) };
     events.writeItem(event) catch |err| {
-      Console.log("error: input_char: {}", .{ err });
+      Console.log("error: input_char: {}", .{err});
       unreachable();
     };
   }
 }
 
 export fn new_emulator() *Emulator {
-  var emulator = Emulator.new(allocator) catch |err| {
-    Console.log("error: Emulator.new: {}", .{ err });
+  // Emulator.new returns by value, so the result has to be moved to the heap:
+  // returning &emulator would hand JS a pointer into this call's dead frame,
+  // which the next call into the module then overwrites.
+  const emulator = allocator.create(Emulator) catch |err| {
+    Console.log("error: new_emulator: {}", .{err});
+    unreachable();
+  };
+  emulator.* = Emulator.new(allocator) catch |err| {
+    Console.log("error: Emulator.new: {}", .{err});
     unreachable();
   };
   emulator.init();
-  return &emulator;
+  return emulator;
 }
 
 export fn insert_disk(emulator: *Emulator, drive: u8, ptr: [*]const u8, size: i32) void {
@@ -142,27 +176,70 @@ fn handle_event(cpc: *chips.cpc_t, ctrl: *bool, shift: *bool) void {
         var c: u8 = 0;
         switch (k) {
           // Space          => { c = 0x20; },
-          SpecialKey.ArrowLeft      => { c = 0x08; },
-          SpecialKey.ArrowRight     => { c = 0x09; },
-          SpecialKey.ArrowDown      => { c = 0x0A; },
-          SpecialKey.ArrowUp        => { c = 0x0B; },
-          SpecialKey.Enter          => { c = 0x0D; },
-          SpecialKey.Control        => { ctrl.* = event == Event.KeyDown; }, // What is the value of the key to inject here???
-          SpecialKey.Shift          => { c = 0x02; shift.* = event == Event.KeyDown; },
-          SpecialKey.Delete         => { c = if (shift.*) 0x0C else 0x01; }, // 0x0C: clear screen
-          SpecialKey.Escape         => { c = if (shift.*) 0x13 else 0x03; }, // 0x13: break
-          SpecialKey.F1             => { c = 0xF1; },
-          SpecialKey.F2             => { c = 0xF2; },
-          SpecialKey.F3             => { c = 0xF3; },
-          SpecialKey.F4             => { c = 0xF4; },
-          SpecialKey.F5             => { c = 0xF5; },
-          SpecialKey.F6             => { c = 0xF6; },
-          SpecialKey.F7             => { c = 0xF7; },
-          SpecialKey.F8             => { c = 0xF8; },
-          SpecialKey.F9             => { c = 0xF9; },
-          SpecialKey.F10            => { c = 0xFA; },
-          SpecialKey.F11            => { c = 0xFB; },
-          SpecialKey.F12            => { c = 0xFC; },
+          SpecialKey.ArrowLeft => {
+            c = 0x08;
+          },
+          SpecialKey.ArrowRight => {
+            c = 0x09;
+          },
+          SpecialKey.ArrowDown => {
+            c = 0x0A;
+          },
+          SpecialKey.ArrowUp => {
+            c = 0x0B;
+          },
+          SpecialKey.Enter => {
+            c = 0x0D;
+          },
+          SpecialKey.Control => {
+            ctrl.* = event == Event.KeyDown;
+          }, // What is the value of the key to inject here???
+          SpecialKey.Shift => {
+            c = 0x02;
+            shift.* = event == Event.KeyDown;
+          },
+          SpecialKey.Delete => {
+            c = if (shift.*) 0x0C else 0x01;
+          }, // 0x0C: clear screen
+          SpecialKey.Escape => {
+            c = if (shift.*) 0x13 else 0x03;
+          }, // 0x13: break
+          SpecialKey.F1 => {
+            c = 0xF1;
+          },
+          SpecialKey.F2 => {
+            c = 0xF2;
+          },
+          SpecialKey.F3 => {
+            c = 0xF3;
+          },
+          SpecialKey.F4 => {
+            c = 0xF4;
+          },
+          SpecialKey.F5 => {
+            c = 0xF5;
+          },
+          SpecialKey.F6 => {
+            c = 0xF6;
+          },
+          SpecialKey.F7 => {
+            c = 0xF7;
+          },
+          SpecialKey.F8 => {
+            c = 0xF8;
+          },
+          SpecialKey.F9 => {
+            c = 0xF9;
+          },
+          SpecialKey.F10 => {
+            c = 0xFA;
+          },
+          SpecialKey.F11 => {
+            c = 0xFB;
+          },
+          SpecialKey.F12 => {
+            c = 0xFC;
+          },
           // Ctrl+Shift+Delete combination not possible in the Browser
           // 0x60           => {
           //   if (shift.* and ctrl.*) {
@@ -171,7 +248,9 @@ fn handle_event(cpc: *chips.cpc_t, ctrl: *bool, shift: *bool) void {
           //     return;
           //   }
           // },
-          else           => { c = 0; },
+          else => {
+            c = 0;
+          },
         }
         if (c != 0) {
           if (event == Event.KeyDown) {

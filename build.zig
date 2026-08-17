@@ -7,8 +7,8 @@ pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
         .version = .{ .major = 1, .minor = 0, .patch = 0 },
         .optimize = .ReleaseSmall, // We force ReleaseSmall for now because of too many locals
         .target = b.resolveTargetQuery(.{
-          .cpu_arch = .wasm32,
-          .os_tag = .freestanding,
+            .cpu_arch = .wasm32,
+            .os_tag = .freestanding,
         }),
         .root_source_file = b.path("src/zpz-wasm.zig"),
     });
@@ -17,11 +17,17 @@ pub fn setup_wasm(b: *std.Build, optimize: std.builtin.Mode) void {
     // There is no libc for wasm32-freestanding, so linkLibC() would provide no
     // header at all. `chips` only needs the declarations from <string.h> and
     // <assert.h>: point at the headers zig already ships for wasm. The mem*
-    // symbols themselves come from zig's compiler_rt.
+    // symbols themselves are imported from the environment, see below.
     const zig_libc = b.pathJoin(&.{ b.graph.zig_lib_directory.path.?, "libc", "include" });
     lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ zig_libc, "wasm-wasi-musl" }) });
     lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ zig_libc, "generic-musl" }) });
     lib.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
+    // Use the libc provided by the environment
+    lib.import_symbols = true;
+    // Don't link zig's compiler_rt: the mem* symbols it would define become
+    // undefined instead, and import_symbols above turns them into env imports.
+    lib.bundle_compiler_rt = false;
+    // Use the memory provided by the environment
     lib.import_memory = true;
     lib.stack_size = 32 * 1024 * 1024;
     // lib.use_stage1 = true; // stage2 not ready
@@ -62,7 +68,21 @@ pub fn build(b: *std.Build) void {
     });
     exe.addIncludePath(b.path("./chips/"));
     exe.addCSourceFiles(.{ .files = &.{"src/chips-impl.c"} });
-    exe.linkSystemLibrary("SDL2");
+    if (target.result.os.tag == .windows) {
+        // No pkg-config/system SDL2 on Windows: point at the SDL2 mingw
+        // development package unpacked in third_party/. The sources include
+        // <SDL.h> directly, hence the SDL2/ suffix on the include path.
+        exe.addIncludePath(b.path("third_party/SDL2/include/SDL2"));
+        // Link the import library by path rather than with linkSystemLibrary:
+        // `-lSDL2` picks the static libSDL2.a first, which drags in the whole
+        // Win32 dependency set (gdi32, setupapi, winmm, imm32, ...).
+        exe.addObjectFile(b.path("third_party/SDL2/lib/libSDL2.dll.a"));
+        // SDL2 is therefore linked dynamically, so the DLL has to sit next to
+        // the executable for both `zig build run` and the installed artifact.
+        b.installBinFile("third_party/SDL2/bin/SDL2.dll", "SDL2.dll");
+    } else {
+        exe.linkSystemLibrary("SDL2");
+    }
     exe.linkLibC(); // better than linkSystemLibrary("c") for cross-compilation
     // Some fairly large structs (cpc_t) are statically initialized.
     exe.stack_size = 32 * 1024 * 1024;

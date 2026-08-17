@@ -103,8 +103,13 @@ async function main() {
   const temporaryCtx = temporaryCanvas.getContext('2d');
   const imageData = new ImageData(temporaryCanvas.width, temporaryCanvas.height);
   // Position in memory of the next available free byte.
-  // malloc will move that position.
-  let heapPos = 1; // 0 is the NULL pointer. Not a proper malloc return value...
+  // malloc will move that position. It is only known once the module has been
+  // instantiated: everything below its __heap_base belongs to the module's
+  // stack and static data, so handing any of it out would corrupt the module.
+  let heapPos = 0;
+  // memset/memcpy are called from the emulator's hot path, so logging every
+  // one of them is only usable for a short experiment, not while running.
+  const traceLibc = true;
   // log string buffer
   let str = '';
   // These are the functions for the WASM environment available for the zig code
@@ -146,22 +151,25 @@ async function main() {
     },
     // libc memset reimplementation
     memset: (ptr, value, size) => {
+      if (traceLibc) console.log('memset', ptr, value, size);
       const mem = new Uint8Array(memory.buffer);
       mem.fill(value, ptr, ptr + size);
       return ptr;
     },
     // libc memcpy reimplementation
     memcpy: (dest, source, n) => {
+      if (traceLibc) console.log('memcpy', dest, source, n);
       const mem = new Uint8Array(memory.buffer);
       mem.copyWithin(dest, source, source + n);
       return dest;
     },
     // libc memcmp reimplmentation
     memcmp: (s1, s2, n) => {
+      if (traceLibc) console.log('memcmp', s1, s2, n);
       const charArray = new Uint8Array(memory.buffer);
       for (let i = 0; i < n; i++) {
-        if (charArray[s1] !== charArray[s2]) {
-          return charArray[s1] - charArray[s2];
+        if (charArray[s1 + i] !== charArray[s2 + i]) {
+          return charArray[s1 + i] - charArray[s2 + i];
         }
       }
       return 0;
@@ -170,12 +178,20 @@ async function main() {
     // This dumb allocator just churn through the memory and does not keep
     // track of freed memory. Will work for a while...
     malloc: size => {
-      const ptr = heapPos;
-      heapPos += size;
+      if (heapPos === 0) throw new Error('malloc called before heapPos was set from __heap_base');
+      // The zig side promises nothing stricter than 16 byte alignment, so this
+      // is the contract it relies on. See malloc_alignment in js-allocator.zig.
+      const ptr = Math.ceil(heapPos / 16) * 16;
+      heapPos = ptr + size;
+      // The module no longer grows the memory itself, so this side has to.
+      const needed = heapPos - memory.buffer.byteLength;
+      if (needed > 0) throw new Error('out of memory'); // We could grow memory here with memory.grow(X)
+      if (traceLibc) console.log('malloc', size, `0x${ptr}`);
       return ptr;
     },
     // libc free reimplementation
     free: ptr => {
+      if (traceLibc) console.log('free', ptr);
       // Nothing gets freed
     },
     __assert_fail_js: (assertion, file, line, fun) => {
@@ -186,7 +202,11 @@ async function main() {
   // Load the wasm code
   const wasm = await WebAssembly.instantiateStreaming(fetch("zpz6128.wasm"), { env });
   // Extract the API
-  const { new_emulator, input_char, keydown, keyup, tick, insert_disk } = wasm.instance.exports;
+  const { new_emulator, input_char, keydown, keyup, tick, insert_disk, heap_base } = wasm.instance.exports;
+  // Claim everything above the module's static data as the heap. Must happen
+  // before any export that allocates is called.
+  heapPos = heap_base();
+  console.log('heap starts at', heapPos);
   // Create the emulator
   const emulator = new_emulator();
   // Register some key event to pass down to the emulator
@@ -210,8 +230,10 @@ async function main() {
       const dsk = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith('.dsk'))[0];
       if (dsk !== undefined) {
         const content = await dsk.arrayBuffer();
-        const charArray = new Uint8Array(memory.buffer);
+        // malloc can grow the memory, which detaches memory.buffer, so the
+        // view has to be taken after it and never cached across a malloc.
         const ptr = env.malloc(content.byteLength);
+        const charArray = new Uint8Array(memory.buffer);
         charArray.set(new Uint8Array(content), ptr);
         insert_disk(emulator, drive, ptr, content.byteLength);
         span.innerText = dsk.name;

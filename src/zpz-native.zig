@@ -14,45 +14,38 @@ const Emulator = @import("zpz.zig").Emulator;
 // } else
 const SDLAdapter = @import("sdl-adapter.zig").SDLAdapter;
 
-const stdin = std.io.getStdIn().reader();
-const stdout = std.io.getStdOut().writer();
-const stderr = std.io.getStdErr().writer();
+// const stdin = std.io.getStdIn().reader();
+// const stdout = std.io.getStdOut().writer();
+// const stderr = std.io.getStdErr().writer();
 
-pub fn cpc_insert_disc(cpc: *chips.cpc_t, drive: u8, pathname: []const u8) !void {
+// There is no mmap on Windows, so the disc image is read into memory instead.
+// chips copies it into the fdd_t straight away (fdd_cpc_insert_dsk memcpy's
+// into fdd->data), so the buffer only has to outlive the insert call.
+pub fn cpc_insert_disc(allocator: std.mem.Allocator, cpc: *chips.cpc_t, drive: u8, pathname: []const u8) !void {
   var file = try std.fs.cwd().openFile(pathname, .{});
   defer file.close();
 
   const size = try file.getEndPos();
-  const buffer = try std.posix.mmap(
-    null,
-    size,
-    std.posix.PROT.READ,
-    .{ .TYPE = .SHARED },
-    file.handle,
-    0,
-  );
-  errdefer std.posix.munmap(buffer);
+  const buffer = try file.readToEndAlloc(allocator, size);
+  defer allocator.free(buffer);
 
-  if (!chips.cpc_insert_disc_in_drive(cpc, drive, buffer.ptr, @as(i32, @intCast(size)))) {
+  if (!chips.cpc_insert_disc_in_drive(cpc, drive, buffer.ptr, @as(i32, @intCast(buffer.len)))) {
     return error.InsertDiscFailed;
   }
 }
 
-pub fn load_cpc_rom_image(pathname: []const u8, rom_image: *chips.cpc_rom_image_t) !void {
+// Unlike the disc image above, chips keeps the ROM image pointer, so the buffer
+// belongs to the caller and must stay alive for as long as the emulator runs.
+pub fn load_cpc_rom_image(allocator: std.mem.Allocator, pathname: []const u8, rom_image: *chips.cpc_rom_image_t) !void {
   var file = try std.fs.cwd().openFile(pathname, .{});
   defer file.close();
 
-  rom_image.size = try file.getEndPos();
-  const buffer = try std.c.mmap(
-    null,
-    rom_image.size,
-    std.os.PROT.READ,
-    std.os.MAP.SHARED,
-    file.handle,
-    0,
-  );
-  errdefer std.c.munmap(buffer);
+  const size = try file.getEndPos();
+  const buffer = try file.readToEndAlloc(allocator, size);
+  errdefer allocator.free(buffer);
+
   rom_image.ptr = buffer.ptr;
+  rom_image.size = buffer.len;
 }
 
 // pub fn debug(_: ?*anyopaque, pins: u64) callconv(.C) void {
@@ -60,6 +53,8 @@ pub fn load_cpc_rom_image(pathname: []const u8, rom_image: *chips.cpc_rom_image_
 // }
 
 pub fn main() anyerror!void {
+  const stdout = std.io.getStdOut().writer();
+  const stderr = std.io.getStdErr().writer();
 
   var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
   const allocator = general_purpose_allocator.allocator();
@@ -94,11 +89,11 @@ pub fn main() anyerror!void {
 
   if (args.len > 1) {
     try stdout.print("Drive A: {s}\n", .{ args[1] });
-    try cpc_insert_disc(&emulator.cpc, 0, args[1]);
+    try cpc_insert_disc(allocator, &emulator.cpc, 0, args[1]);
   }
   if (args.len > 2) {
     try stdout.print("Drive B: {s}\n", .{ args[2] });
-    try cpc_insert_disc(&emulator.cpc, 1, args[2]);
+    try cpc_insert_disc(allocator, &emulator.cpc, 1, args[2]);
   }
 
   var adapter = try SDLAdapter.init(chips.AM40010_DISPLAY_WIDTH, chips.AM40010_DISPLAY_HEIGHT * 2);

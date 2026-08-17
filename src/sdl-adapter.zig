@@ -13,7 +13,6 @@ pub const SDLAdapter = struct {
   renderer: *sdl.SDL_Renderer,
   width: usize,
   height: usize,
-  tv: std.posix.timeval,
 
   interface: IOAdapter,
 
@@ -62,7 +61,6 @@ pub const SDLAdapter = struct {
       .renderer = renderer,
       .width = width,
       .height = height,
-      .tv = std.mem.zeroInit(std.posix.timeval, .{}),
 
       .interface = IOAdapter {
         .handle_event_fn = handle_event,
@@ -140,11 +138,9 @@ pub const SDLAdapter = struct {
     try renderScene(self);
   }
 
-  pub fn get_timestamp_millisecond(adapter: *IOAdapter) u64 {
-    var self: *SDLAdapter = @fieldParentPtr("interface", adapter);
-
-    std.posix.gettimeofday(&self.tv, null);
-    return @as(u64, @intCast(1000000 * self.tv.sec + self.tv.usec)) / 1000;
+  pub fn get_timestamp_millisecond(_: *IOAdapter) u64 {
+    // std.posix.gettimeofday and timeval do not exist on Windows.
+    return @intCast(std.time.milliTimestamp());
   }
 
   fn prepareScene(self: *Self, pixel_buffer: [*]c_uint, width: usize, height: usize) anyerror!void {
