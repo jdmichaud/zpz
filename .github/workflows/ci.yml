@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - '*'
+      - '**'
 jobs:
   build:
     strategy:
@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v7
 
     - name: Setup Zig
-      uses: goto-bus-stop/setup-zig@v1.3.0
+      uses: mlugg/setup-zig@v2
       with:
-        version: master
+        version: 0.14.1
 
     - name: Init submodules
       run: |
@@ -38,7 +38,9 @@ jobs:
       run: zig build -Doptimize=ReleaseSafe
 
     - name: Archive executable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v7
       with:
-        name: zpz
+        # upload-artifact v4 and later reject two uploads sharing a name, so
+        # keep it unique per matrix entry.
+        name: zpz-${{ matrix.target }}
         path: zig-out/bin/*

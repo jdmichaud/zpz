@@ -17,6 +17,8 @@ The emulator is accessible in your browser here: http://cpc.novidee.com.
 
 ## Build
 
+Currently compile with zig 0.14.1.
+
 First clone the zpz repository:
 ```bash
 git clone git@github.com:jdmichaud/zpz.git
